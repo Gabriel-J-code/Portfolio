@@ -14,7 +14,7 @@ O site público (Flutter Web) só **lê** os dados. O cadastro é feito por um p
 |---|---|
 | Linguagem / framework | Java 17, Spring Boot 4.1 (Web MVC, Data JPA, Security, Validation, Mail) |
 | Autenticação | Senha (BCrypt) + código por e-mail → JWT (OAuth2 Resource Server) |
-| Banco de dados | PostgreSQL 17 (via Docker) |
+| Banco de dados | PostgreSQL 18 (Docker em dev, Neon em produção), ordenação de texto em português (ICU `pt-BR`) |
 | Documentação | OpenAPI 3 / Swagger UI (springdoc) |
 | Testes | JUnit 5, MockMvc, Testcontainers |
 | Planejado | Redis (cache), RabbitMQ (eventos), deploy no GCP Cloud Run |
@@ -333,6 +333,7 @@ Escolhas feitas de propósito, com o motivo. O que está fora do escopo agora te
 | **Testes contra um PostgreSQL real (Testcontainers), não H2** | Um banco em memória diferente esconderia comportamentos do PostgreSQL, como o índice único em `lower(nome)`, os tipos `TEXT`/`TIMESTAMPTZ` e as constraints. |
 | **PostgreSQL no lugar do SQL Server** | Trocado antes do primeiro deploy: é o banco relacional mais comum em projetos novos, tem planos gratuitos gerenciados (o SQL Server gerenciado custa a partir de dezenas de dólares por mês) e padroniza com outros projetos. Como nenhum banco de produção existia, a `V1` foi reescrita em vez de migrada. |
 | **Tag única sem diferenciar maiúsculas: índice em `lower(nome)`** | O PostgreSQL compara texto diferenciando maiúsculas. Um `UNIQUE INDEX` sobre a expressão `lower(nome)` faz o banco recusar "JAVA" quando já existe "Java", sem extensões (como `citext`). O service também confere (`IgnoreCase`) para responder `409` com uma mensagem clara. |
+| **Collation ICU `pt-BR` definida na criação do banco** | A ordem das listas (tags, competências) depende da *collation* do banco. A padrão do Neon é `C.UTF-8`, que ordena pelo código dos caracteres (maiúsculas antes, "É" depois do "z"). Com ICU `pt-BR`, a ordem é a de um dicionário: "comunicação, docker, Ética, Java". A mesma configuração vale no Docker Compose, no Testcontainers e em produção, e um teste garante essa ordem. |
 
 ## Roadmap
 

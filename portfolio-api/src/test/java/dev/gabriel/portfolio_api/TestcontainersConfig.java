@@ -20,6 +20,8 @@ public class TestcontainersConfig {
     @Bean
     @ServiceConnection
     PostgreSQLContainer postgresContainer() {
-        return new PostgreSQLContainer(DockerImageName.parse("postgres:17"));
+        return new PostgreSQLContainer(DockerImageName.parse("postgres:18"))
+                // Ordenacao em portugues (ICU pt-BR), igual ao docker-compose e ao banco de producao
+                .withEnv("POSTGRES_INITDB_ARGS", "--locale-provider=icu --icu-locale=pt-BR");
     }
 }

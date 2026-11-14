@@ -46,7 +46,7 @@ Diagrama gerado pelo DBeaver a partir do banco real. `projeto_tag` liga projetos
 | Parte | Tecnologias |
 |---|---|
 | Back-end | Java 17, Spring Boot 4 (Web MVC, Data JPA, Security, Validation), OAuth2 Resource Server (JWT), Spring Mail |
-| Banco de dados | PostgreSQL 17 (Docker) |
+| Banco de dados | PostgreSQL 18 (Docker em dev; Neon em produção) |
 | Qualidade | JUnit 5, MockMvc, Testcontainers (testes de integração contra um PostgreSQL real) |
 | Documentação da API | OpenAPI 3 / Swagger UI |
 | Front-end | Flutter Web |

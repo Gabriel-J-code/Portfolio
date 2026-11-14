@@ -6,19 +6,24 @@
 
 services:
   postgres:
-    image: postgres:17
+    image: postgres:18
     container_name: portfolio-postgres
     environment:
       # A imagem oficial cria o usuario e o banco na primeira inicializacao (volume vazio)
       POSTGRES_DB: portfolio
       POSTGRES_USER: portfolio
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # Ordenacao de texto em portugues (ICU pt-BR): "comunicacao, Docker, Etica, Java".
+      # Sem isto, uma collation "C" ordenaria maiusculas antes e acentos depois do "z".
+      # Mesma configuracao do Testcontainers e do banco de producao (Neon).
+      POSTGRES_INITDB_ARGS: "--locale-provider=icu --icu-locale=pt-BR"
     ports:
       # Porta 5433 no computador -> 5432 no container.
       # (A 5432 do Windows pode estar ocupada por um PostgreSQL instalado localmente.)
       - "5433:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      # A partir da imagem 18, o volume e montado em /var/lib/postgresql (os dados ficam em 18/docker)
+      - postgres-data:/var/lib/postgresql
     healthcheck:
       # So considera "saudavel" quando o Postgres aceita conexoes no banco "portfolio"
       test: ["CMD-SHELL", "pg_isready -U portfolio -d portfolio"]

@@ -113,6 +113,21 @@ class TagControllerTest extends IntegracaoTest {
     }
 
     @Test
+    @DisplayName("Ordem alfabetica em portugues: ignora maiusculas e acentos (collation ICU pt-BR do banco)")
+    void listarOrdenadoEmPortugues() throws Exception {
+        // Com a collation "C", a ordem seria pelo codigo dos caracteres:
+        // "Java", "comunicacao", "docker", "Etica" (maiusculas primeiro, letra acentuada depois do "z")
+        criar("Ética", "#000000");
+        criar("Java", "#E76F00");
+        criar("docker", "#2496ED");
+        criar("comunicação", "#123456");
+
+        mockMvc.perform(get(URL))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].nome", contains("comunicação", "docker", "Ética", "Java")));
+    }
+
+    @Test
     @DisplayName("PUT na tag reflete nos projetos que a usam")
     void atualizarRefleteNosProjetos() throws Exception {
         int tag = criar("Sprng", "#6DB33F"); // nome com erro de digitacao
