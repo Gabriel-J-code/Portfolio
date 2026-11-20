@@ -289,6 +289,8 @@ Variáveis de ambiente do perfil `prod`, além de `ADMIN_EMAIL`, `ADMIN_PASSWORD
 
 Em produção, os segredos não ficam em arquivo `.env`. Eles vêm das variáveis de ambiente do serviço, de preferência por um gerenciador de segredos, como o Secret Manager do GCP.
 
+O passo a passo do deploy (banco no Neon, segredos, teste da imagem contra o banco real e Cloud Run) está em [doc/deploy.md](doc/deploy.md).
+
 ### Imagem Docker
 
 O `Dockerfile` gera a imagem que vai para produção. Ele tem dois estágios:

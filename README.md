@@ -77,6 +77,10 @@ Pré-requisitos: JDK 17+ e Docker Desktop.
 - [ ] Cache com Redis nas consultas públicas
 - [ ] Deploy: API no Google Cloud Run, site no GitHub Pages ou Cloudflare Pages
 
+## Uso de IA
+
+Desenvolvido com o [Claude Code](https://claude.com/claude-code) como par de programação e tutor no aprendizado de Spring Boot. As decisões de arquitetura e produto, a revisão e os testes são meus.
+
 ## Autor
 
 **Gabriel de Jesus**, [GitHub](https://github.com/Gabriel-J-code).
