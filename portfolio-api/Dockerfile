@@ -43,18 +43,39 @@ COPY --from=build /build/extracted/spring-boot-loader/ ./
 COPY --from=build /build/extracted/snapshot-dependencies/ ./
 COPY --from=build /build/extracted/application/ ./
 
-USER spring
-
 # Perfil de producao por padrao (Swagger desligado, e-mail pelo Resend, sem padroes de dev).
 # Pode ser trocado na hora de rodar: docker run -e SPRING_PROFILES_ACTIVE=...
 ENV SPRING_PROFILES_ACTIVE=prod
-# A JVM reserva por padrao so 25% da memoria do container para o heap.
-# Num container dedicado a API, 75% aproveita melhor a memoria (ex.: Render free com 512 MB).
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75"
+
+# Opcoes da JVM, pensadas para o Render free (512 MB de RAM e so 0,1 de CPU):
+# - MaxRAMPercentage=60: heap de ate ~300 MB. O padrao da JVM (25%) seria pouco; 75% somado ao que a
+#   JVM usa fora do heap (metaspace, threads, ~150 MB) poderia passar de 512 MB e o container seria morto.
+# - TieredStopAtLevel=1: so o compilador JIT rapido (C1). O C2 gera codigo mais otimizado, mas gasta muita
+#   CPU compilando; com 0,1 de CPU isso dobrava o tempo de startup (medido: 286 s -> 136 s).
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=60 -XX:TieredStopAtLevel=1"
+
+# CDS (Class Data Sharing): uma execucao de "treino" durante o build grava em application.jsa as classes
+# ja carregadas e verificadas; no startup real a JVM so mapeia esse arquivo, em vez de ler e verificar
+# milhares de classes de dentro dos .jar. Tecnica documentada pelo Spring Boot para startup mais rapido.
+# - spring.context.exit=onRefresh: sobe o contexto do Spring e encerra (o seed, um ApplicationRunner, nem roda).
+# - Sem banco no build: Flyway desligado e Hibernate sem consultar o banco (dialeto informado).
+# - Variaveis obrigatorias do perfil prod com valores ficticios: valem so para este RUN e nao ficam na imagem.
+RUN DB_URL=jdbc:postgresql://treino.invalid/portfolio DB_USER=treino DB_PASSWORD=treino \
+    ADMIN_EMAIL=treino@exemplo.com ADMIN_PASSWORD=treino \
+    JWT_SECRET=dHJlaW5vLXRyZWluby10cmVpbm8tdHJlaW5vLTMyYiE= \
+    RESEND_API_KEY=re_treino MAIL_FROM=treino@exemplo.com CORS_ORIGINS=https://treino.invalid \
+    java -XX:ArchiveClassesAtExit=application.jsa -Dspring.context.exit=onRefresh \
+         -Dspring.flyway.enabled=false \
+         -Dspring.jpa.properties.hibernate.boot.allow_jdbc_metadata_access=false \
+         -Dspring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect \
+         -Dspring.jpa.hibernate.ddl-auto=none \
+         -jar application.jar
+
+USER spring
 
 # Documenta a porta (a hospedagem informa a real pela variavel PORT; padrao 8080)
 EXPOSE 8080
 
 # Forma "exec" (JSON): o java vira o processo principal e recebe o SIGTERM do
 # Docker/da hospedagem, permitindo desligar de forma limpa.
-ENTRYPOINT ["java", "-jar", "application.jar"]
+ENTRYPOINT ["java", "-XX:SharedArchiveFile=application.jsa", "-jar", "application.jar"]

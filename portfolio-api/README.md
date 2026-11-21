@@ -300,7 +300,17 @@ O `Dockerfile` gera a imagem que vai para produção. Ele tem dois estágios:
 1. **build:** JDK 17 + Maven Wrapper compilam o projeto e geram o `.jar`. O `pom.xml` é copiado antes do código, então o download das dependências fica em cache e só é refeito quando o `pom.xml` muda.
 2. **runtime:** só o JRE 17 e a aplicação. O `.jar` é extraído em **camadas** (dependências, loader do Spring e código); ao mudar só o código, apenas a camada da aplicação (poucos KB) muda.
 
-A imagem já vem com `SPRING_PROFILES_ACTIVE=prod`, roda com um usuário **sem privilégios de root** e usa `-XX:MaxRAMPercentage=75` (por padrão a JVM usaria só 25% da memória do container). O `.dockerignore` impede que o `.env` entre na imagem.
+A imagem já vem com `SPRING_PROFILES_ACTIVE=prod` e roda com um usuário **sem privilégios de root**. O `.dockerignore` impede que o `.env` entre na imagem.
+
+**Ajustada para o Render free (512 MB de RAM, 0,1 de CPU).** Medido localmente com `docker run --memory=512m --cpus=0.1`:
+
+| Ajuste | Por quê | Startup |
+|---|---|---|
+| (imagem original) | | 286 s |
+| `-XX:TieredStopAtLevel=1` | Só o compilador JIT rápido (C1). O C2 otimiza mais, mas gasta muita CPU compilando | 136 s |
+| **CDS** (Class Data Sharing) | Uma execução de "treino" no `docker build` grava as classes já carregadas em `application.jsa`; no startup, a JVM só mapeia o arquivo | **94 s** |
+
+Além disso: `-XX:MaxRAMPercentage=60` (heap de até ~300 MB; somado ao que a JVM usa fora do heap, fica abaixo dos 512 MB) e pool do Hikari com 5 conexões no perfil `prod`. Uso de memória medido: ~200 MB.
 
 > Os **testes não rodam no `docker build`**: eles precisam do Docker (Testcontainers), que não existe dentro do build. Quem garante os testes é o [GitHub Actions](#integração-contínua-github-actions), a cada push. Localmente, rode `.\mvnw test` antes de gerar a imagem.
 

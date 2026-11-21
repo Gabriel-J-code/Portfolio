@@ -173,5 +173,5 @@ A documentar conforme for feito:
 - [ ] Web Service com runtime Docker, root directory `portfolio-api`, região mais próxima do Neon
 - [ ] Variáveis de ambiente: `DB_URL`, `DB_USER`, `DB_PASSWORD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `JWT_SECRET`, `RESEND_API_KEY`, `MAIL_FROM`, `CORS_ORIGINS` (`SPRING_PROFILES_ACTIVE=prod` já vem da imagem; `PORT` é definida pelo Render)
 - [ ] Health check em `/api/projetos`
-- [ ] Memória (512 MB no free) e pool do Hikari pequeno por causa do Neon free
+- [x] Memória (512 MB no free), CPU (0,1) e pool do Hikari: imagem ajustada e medida (startup ~94 s, ~200 MB; ver "Imagem Docker" no README)
 - [ ] Login com 2FA de ponta a ponta
