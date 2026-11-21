@@ -71,6 +71,7 @@ Pré-requisitos: JDK 17+ e Docker Desktop.
 - [x] API: login em duas etapas (senha + código por e-mail → JWT) e CORS
 - [ ] Layout do site no Figma
 - [ ] Site em Flutter Web: página única com as seções Sobre, Competências, Projetos e Contato
+- [ ] Snapshot estático do conteúdo publicado com o site: aparece na hora enquanto a API (que dorme no plano gratuito) acorda, e é regerado pelo GitHub Actions
 - [ ] Painel administrativo para cadastrar o conteúdo
 - [x] API pronta para produção: migrações com Flyway, perfil de produção e imagem Docker
 - [x] CI: testes da API no GitHub Actions a cada push e pull request

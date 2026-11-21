@@ -4,7 +4,7 @@ Passo a passo para colocar a API em produção. O [README](../README.md#produç�
 
 | Peça | Serviço | Situação |
 |---|---|---|
-| Banco de dados | [Neon](https://neon.tech) (PostgreSQL 18, AWS São Paulo) | ✅ Pronto |
+| Banco de dados | [Neon](https://neon.tech) (PostgreSQL 18, AWS Virginia `us-east-1`) | ⏳ Recriar em Virginia |
 | E-mail do 2FA | [Resend](https://resend.com) (API HTTP) | ⏳ Criar a conta e a chave |
 | API | [Render](https://render.com) (plano free, imagem pelo Dockerfile) | ⏳ Próxima etapa |
 
@@ -18,7 +18,11 @@ O plano gratuito tem 1 GB, 100 CU-hora por mês e **scale-to-zero**: o banco "do
 
 ### Criar o projeto
 
-No painel do Neon: novo projeto `portfolio`, **PostgreSQL 18**, região **AWS São Paulo (`sa-east-1`)**. Os recursos extras (Neon Auth, Data API) não são necessários.
+No painel do Neon: novo projeto `portfolio`, **PostgreSQL 18**, região **AWS US East (N. Virginia, `us-east-1`)**.
+
+**Por que Virginia e não São Paulo?** O Render não tem região na América do Sul (só Oregon, Ohio, Virginia, Frankfurt e Singapura), e a API fica no Render em **Virginia**. O que mais pesa é a distância **API ↔ banco**: cada requisição faz várias consultas, e com o banco em São Paulo cada uma custaria ~120 ms de ida e volta. Na mesma região, ~1–2 ms. A distância visitante ↔ API (Brasil → EUA) existe de qualquer jeito, e é uma só por requisição. O projeto foi criado primeiro em São Paulo e recriado aqui antes do primeiro deploy (o banco só tinha a conta admin, que o seed recria).
+
+Os recursos extras (Neon Auth, Data API) não são necessários.
 
 ### Criar o banco com ordenação em português
 
@@ -44,14 +48,14 @@ As tabelas **não** são criadas à mão: o Flyway cria tudo na primeira vez que
 O Neon mostra a conexão no formato do `libpq` (o cliente em C do Postgres):
 
 ```
-postgresql://USUARIO:SENHA@ep-xxxx-yyyy-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+postgresql://USUARIO:SENHA@ep-xxxx-yyyy-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 ```
 
 O driver JDBC usa outro formato e recebe usuário e senha separados. Monte assim:
 
 | Variável | Valor |
 |---|---|
-| `DB_URL` | `jdbc:postgresql://ep-xxxx-yyyy.sa-east-1.aws.neon.tech/portfolio?sslmode=require` |
+| `DB_URL` | `jdbc:postgresql://ep-xxxx-yyyy.us-east-1.aws.neon.tech/portfolio?sslmode=require` |
 | `DB_USER` | o trecho antes do `:` (ex.: `neondb_owner`) |
 | `DB_PASSWORD` | o trecho entre o `:` e o `@` |
 
@@ -170,7 +174,7 @@ Para encerrar: **Ctrl+C** no terminal da API e **feche o terminal**, o que apaga
 
 A documentar conforme for feito:
 
-- [ ] Web Service com runtime Docker, root directory `portfolio-api`, região mais próxima do Neon
+- [ ] Web Service com runtime Docker, root directory `portfolio-api`, região **Virginia** (a mesma do Neon; não dá para mudar depois)
 - [ ] Variáveis de ambiente: `DB_URL`, `DB_USER`, `DB_PASSWORD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `JWT_SECRET`, `RESEND_API_KEY`, `MAIL_FROM`, `CORS_ORIGINS` (`SPRING_PROFILES_ACTIVE=prod` já vem da imagem; `PORT` é definida pelo Render)
 - [ ] Health check em `/api/projetos`
 - [x] Memória (512 MB no free), CPU (0,1) e pool do Hikari: imagem ajustada e medida (startup ~94 s, ~200 MB; ver "Imagem Docker" no README)
