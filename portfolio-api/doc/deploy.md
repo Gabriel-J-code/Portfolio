@@ -56,7 +56,7 @@ O driver JDBC usa outro formato e recebe usuário e senha separados. Monte assim
 | Variável | Valor |
 |---|---|
 | `DB_URL` | `jdbc:postgresql://ep-xxxx-yyyy.us-east-1.aws.neon.tech/portfolio?sslmode=require` |
-| `DB_USER` | o trecho antes do `:` (ex.: `neondb_owner`) |
+| `DB_USER` | o trecho antes do `:` (ex.: `portfolio_owner`; o Neon dá ao dono o nome `<banco padrão>_owner`) |
 | `DB_PASSWORD` | o trecho entre o `:` e o `@` |
 
 Ajustes em relação à string original:
@@ -142,7 +142,7 @@ Subir a API. No `docker run`, um `-e VAR` sem `=` repassa a variável da sessão
 ```powershell
 docker run --rm -p 8080:8080 `
   -e DB_URL="jdbc:postgresql://$HOST_NEON/portfolio?sslmode=require" `
-  -e DB_USER="neondb_owner" `
+  -e DB_USER="portfolio_owner" `
   -e DB_PASSWORD -e ADMIN_PASSWORD -e JWT_SECRET -e RESEND_API_KEY `
   -e ADMIN_EMAIL="$EMAIL_ADMIN" `
   -e MAIL_FROM="onboarding@resend.dev" `
