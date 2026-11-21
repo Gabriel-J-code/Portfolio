@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.mail.MailSendException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -30,6 +29,7 @@ import com.jayway.jsonpath.JsonPath;
 
 import dev.gabriel.portfolio_api.IntegracaoTest;
 import dev.gabriel.portfolio_api.entities.Acesso;
+import dev.gabriel.portfolio_api.exceptions.EnvioDeEmailException;
 import dev.gabriel.portfolio_api.repositories.AcessoRepository;
 import dev.gabriel.portfolio_api.repositories.TagRepository;
 
@@ -191,7 +191,7 @@ class AuthControllerTest extends IntegracaoTest {
     @Test
     @DisplayName("Se o e-mail nao puder ser enviado -> 503 e o codigo NAO fica salvo (rollback)")
     void falhaNoEnvio() throws Exception {
-        doThrow(new MailSendException("SMTP fora do ar"))
+        doThrow(new EnvioDeEmailException("Provedor de e-mail fora do ar", null))
                 .when(emailService).enviarCodigoDeAcesso(anyString(), anyString(), any());
 
         mockMvc.perform(post(LOGIN).contentType(MediaType.APPLICATION_JSON).content(json(ADMIN_EMAIL, ADMIN_SENHA)))

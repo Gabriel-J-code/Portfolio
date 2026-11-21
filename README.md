@@ -19,7 +19,7 @@ flowchart LR
     F -->|"HTTP/JSON"| API["portfolio-api<br/>Spring Boot"]
     P -->|"HTTP/JSON + JWT"| API
     API --> DB[("PostgreSQL")]
-    API -->|"código de acesso"| M["E-mail (SMTP)"]
+    API -->|"código de acesso"| M["E-mail<br/>(Resend; Mailpit em dev)"]
 ```
 
 - O **site público** só **lê** os dados da API: projetos, competências, contatos e textos de apresentação.
@@ -75,7 +75,7 @@ Pré-requisitos: JDK 17+ e Docker Desktop.
 - [x] API pronta para produção: migrações com Flyway, perfil de produção e imagem Docker
 - [x] CI: testes da API no GitHub Actions a cada push e pull request
 - [ ] Cache com Redis nas consultas públicas
-- [ ] Deploy: API no Google Cloud Run, site no GitHub Pages ou Cloudflare Pages
+- [ ] Deploy: API no Render (banco no Neon, e-mail pelo Resend), site no GitHub Pages ou Cloudflare Pages
 
 ## Uso de IA
 

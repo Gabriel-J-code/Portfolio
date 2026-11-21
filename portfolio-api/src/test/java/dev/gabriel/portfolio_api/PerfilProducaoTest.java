@@ -1,5 +1,6 @@
 package dev.gabriel.portfolio_api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
@@ -20,7 +21,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import dev.gabriel.portfolio_api.repositories.TagRepository;
+import dev.gabriel.portfolio_api.services.EmailService;
 import dev.gabriel.portfolio_api.services.JwtService;
+import dev.gabriel.portfolio_api.services.ResendEmailService;
 
 /**
  * Sobe a aplicacao com o perfil "prod" (application-prod.properties) e confere o que muda em producao.
@@ -33,10 +36,8 @@ import dev.gabriel.portfolio_api.services.JwtService;
         "DB_URL=jdbc:postgresql://ignorado-pelo-testcontainers/portfolio",
         "DB_USER=ignorado",
         "DB_PASSWORD=ignorado",
-        "MAIL_HOST=smtp.exemplo.com",
-        "MAIL_USERNAME=usuario",
-        "MAIL_PASSWORD=senha",
-        "MAIL_FROM=portfolio@exemplo.com",
+        "RESEND_API_KEY=re_chave_de_teste",
+        "MAIL_FROM=onboarding@resend.dev",
         "CORS_ORIGINS=" + PerfilProducaoTest.ORIGEM_DO_FRONT,
         "ADMIN_EMAIL=gabriel@exemplo.com",
         "ADMIN_PASSWORD=senha-de-teste",
@@ -58,6 +59,9 @@ class PerfilProducaoTest {
     @Autowired
     private TagRepository tagRepository;
 
+    @Autowired
+    private EmailService emailService;
+
     @AfterEach
     void limpar() {
         tagRepository.deleteAll();
@@ -68,6 +72,12 @@ class PerfilProducaoTest {
     void swaggerDesligado() throws Exception {
         mockMvc.perform(get("/v3/api-docs")).andExpect(status().isNotFound());
         mockMvc.perform(get("/swagger-ui/index.html")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("E-mail sai pela API HTTP do Resend (o Render free bloqueia SMTP)")
+    void emailPeloResend() {
+        assertThat(emailService).isInstanceOf(ResendEmailService.class);
     }
 
     @Test
@@ -90,7 +100,7 @@ class PerfilProducaoTest {
     void locationComHttpsAtrasDoProxy() throws Exception {
         String token = jwtService.gerarToken("gabriel@exemplo.com").token();
 
-        // O proxy do Cloud Run recebe em HTTPS e repassa em HTTP, avisando nos cabecalhos X-Forwarded-*
+        // O proxy da hospedagem recebe em HTTPS e repassa em HTTP, avisando nos cabecalhos X-Forwarded-*
         mockMvc.perform(post("/api/tags")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .header("X-Forwarded-Proto", "https")

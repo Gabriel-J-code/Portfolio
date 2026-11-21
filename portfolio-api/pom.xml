@@ -58,10 +58,16 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
-		<!-- Envio de e-mail (codigo do 2FA) via SMTP -->
+		<!-- Envio de e-mail (codigo do 2FA) via SMTP: Mailpit em desenvolvimento e nos testes -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+		<!-- RestClient (cliente HTTP do Spring) ja configurado pelo Boot: usado para enviar o e-mail
+		     pela API HTTP do Resend em producao (o Render free bloqueia as portas SMTP) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-restclient</artifactId>
 		</dependency>
 		<!-- Bean Validation (@NotBlank, @NotNull, @Valid...) nos DTOs de entrada -->
 		<dependency>

@@ -12,12 +12,13 @@ O site público (Flutter Web) só **lê** os dados. O cadastro é feito por um p
 
 | Camada | Tecnologia |
 |---|---|
-| Linguagem / framework | Java 17, Spring Boot 4.1 (Web MVC, Data JPA, Security, Validation, Mail) |
+| Linguagem / framework | Java 17, Spring Boot 4.1 (Web MVC, Data JPA, Security, Validation, Mail, RestClient) |
 | Autenticação | Senha (BCrypt) + código por e-mail → JWT (OAuth2 Resource Server) |
 | Banco de dados | PostgreSQL 18 (Docker em dev, Neon em produção), ordenação de texto em português (ICU `pt-BR`) |
 | Documentação | OpenAPI 3 / Swagger UI (springdoc) |
 | Testes | JUnit 5, MockMvc, Testcontainers |
-| Planejado | Redis (cache), RabbitMQ (eventos), deploy no GCP Cloud Run |
+| E-mail | SMTP (Mailpit) em desenvolvimento; API HTTP do Resend em produção |
+| Planejado | Redis (cache), RabbitMQ (eventos), deploy no Render |
 
 ## Pré-requisitos
 
@@ -269,9 +270,9 @@ Para recomeçar o banco de desenvolvimento do zero: `docker compose down -v` e `
 Em produção, a API roda com o perfil **`prod`** (`SPRING_PROFILES_ACTIVE=prod`), definido em `application-prod.properties`. Ele muda o seguinte:
 
 - **Swagger desligado:** `/swagger-ui.html` e `/v3/api-docs` respondem `404`, e o mapa das rotas do painel não fica público.
-- **Sem valores padrão de desenvolvimento:** nada de `localhost` ou Mailpit. Se faltar uma variável obrigatória, a API **não sobe**. A exceção é o SMTP: sem ele, a API sobe, mas o login responde `503`.
-- **E-mail real:** SMTP com login e STARTTLS (porta 587), com timeouts para o login não travar se o servidor de e-mail não responder.
-- **Atrás de proxy HTTPS** (`server.forward-headers-strategy=framework`): o Cloud Run recebe em HTTPS e repassa para a API em HTTP. Com isso, a API lê os cabeçalhos `X-Forwarded-*` e gera links corretos, como o `Location` do `201` com `https://` e o domínio público.
+- **Sem valores padrão de desenvolvimento:** nada de `localhost` ou Mailpit. Se faltar uma variável obrigatória, a API **não sobe**.
+- **E-mail pela API HTTP do [Resend](https://resend.com)** (`app.email.provedor=resend`), não por SMTP: o plano gratuito do Render bloqueia as portas SMTP. Timeouts de 5 s (conexão) e 10 s (resposta) evitam que o login trave se o Resend não responder; qualquer falha vira `503`.
+- **Atrás de proxy HTTPS** (`server.forward-headers-strategy=framework`): o Render recebe em HTTPS e repassa para a API em HTTP. Com isso, a API lê os cabeçalhos `X-Forwarded-*` e gera links corretos, como o `Location` do `201` com `https://` e o domínio público.
 - **Sem SQL no log.**
 
 Variáveis de ambiente do perfil `prod`, além de `ADMIN_EMAIL`, `ADMIN_PASSWORD` e `JWT_SECRET`:
@@ -281,15 +282,16 @@ Variáveis de ambiente do perfil `prod`, além de `ADMIN_EMAIL`, `ADMIN_PASSWORD
 | `SPRING_PROFILES_ACTIVE` | `prod` |
 | `DB_URL` | `jdbc:postgresql://<host>/portfolio?sslmode=require` (provedores gerenciados exigem TLS) |
 | `DB_USER` / `DB_PASSWORD` | Usuário e senha do banco de produção |
-| `MAIL_HOST` / `MAIL_PORT` | `smtp.gmail.com` / `587` (porta opcional; padrão `587`) |
-| `MAIL_USERNAME` / `MAIL_PASSWORD` | Conta SMTP (no Gmail, uma **senha de app**, não a senha da conta) |
-| `MAIL_FROM` | Remetente; em geral, o próprio e-mail da conta SMTP |
+| `RESEND_API_KEY` | Chave criada no painel do Resend (começa com `re_`) |
+| `MAIL_FROM` | Remetente. Sem domínio próprio: `onboarding@resend.dev` |
 | `CORS_ORIGINS` | Domínio do front, ex.: `https://seu-usuario.github.io` |
-| `PORT` | Definida automaticamente pelo Cloud Run (padrão `8080`) |
+| `PORT` | Definida automaticamente pela hospedagem (padrão `8080`) |
 
-Em produção, os segredos não ficam em arquivo `.env`. Eles vêm das variáveis de ambiente do serviço, de preferência por um gerenciador de segredos, como o Secret Manager do GCP.
+> Sem domínio próprio verificado, o Resend só entrega para o e-mail **dono da conta**. Por isso o `ADMIN_EMAIL` tem que ser o e-mail usado no cadastro do Resend (é o único destinatário da API).
 
-O passo a passo do deploy (banco no Neon, segredos, teste da imagem contra o banco real e Cloud Run) está em [doc/deploy.md](doc/deploy.md).
+Em produção, os segredos não ficam em arquivo `.env`. Eles vêm das variáveis de ambiente configuradas no painel da hospedagem.
+
+O passo a passo do deploy (banco no Neon, segredos, e-mail no Resend, teste da imagem contra o banco real e Render) está em [doc/deploy.md](doc/deploy.md).
 
 ### Imagem Docker
 
@@ -310,12 +312,12 @@ docker build -t portfolio-api .
 docker run --rm -p 8080:8080 --env-file .env `
   -e DB_URL="jdbc:postgresql://host.docker.internal:5433/portfolio" `
   -e DB_USER=portfolio `
-  -e MAIL_HOST=host.docker.internal -e MAIL_PORT=1025 -e MAIL_USERNAME=teste -e MAIL_PASSWORD=teste `
-  -e MAIL_FROM=teste@exemplo.com -e CORS_ORIGINS=https://exemplo.github.io `
+  -e RESEND_API_KEY=re_falsa -e MAIL_FROM=onboarding@resend.dev `
+  -e CORS_ORIGINS=https://exemplo.github.io `
   portfolio-api
 ```
 
-Com o perfil `prod`, o Swagger responde `404` e o login responde `503`, porque o Mailpit não tem STARTTLS. Para testar o login pela imagem, use o perfil de desenvolvimento: `-e SPRING_PROFILES_ACTIVE=default` (aí só `DB_URL` e `MAIL_HOST` precisam ser passados).
+Com o perfil `prod`, o Swagger responde `404` e o login responde `503`, porque a chave do Resend é falsa. Para testar o login pela imagem com o Mailpit, use o perfil de desenvolvimento: `-e SPRING_PROFILES_ACTIVE=default -e MAIL_HOST=host.docker.internal` (além do `DB_URL`).
 
 ## Decisões de projeto
 
@@ -335,6 +337,7 @@ Escolhas feitas de propósito, com o motivo. O que está fora do escopo agora te
 | **Testes contra um PostgreSQL real (Testcontainers), não H2** | Um banco em memória diferente esconderia comportamentos do PostgreSQL, como o índice único em `lower(nome)`, os tipos `TEXT`/`TIMESTAMPTZ` e as constraints. |
 | **PostgreSQL no lugar do SQL Server** | Trocado antes do primeiro deploy: é o banco relacional mais comum em projetos novos, tem planos gratuitos gerenciados (o SQL Server gerenciado custa a partir de dezenas de dólares por mês) e padroniza com outros projetos. Como nenhum banco de produção existia, a `V1` foi reescrita em vez de migrada. |
 | **Tag única sem diferenciar maiúsculas: índice em `lower(nome)`** | O PostgreSQL compara texto diferenciando maiúsculas. Um `UNIQUE INDEX` sobre a expressão `lower(nome)` faz o banco recusar "JAVA" quando já existe "Java", sem extensões (como `citext`). O service também confere (`IgnoreCase`) para responder `409` com uma mensagem clara. |
+| **E-mail: interface `EmailService` com SMTP (desenvolvimento) e Resend (produção)** | O Render free bloqueia SMTP, então em produção o código do 2FA sai por HTTPS. A implementação é escolhida por `app.email.provedor` (`@ConditionalOnProperty`): o `AcessoService` não sabe qual está ativa, e o desenvolvimento continua com o Mailpit. O Resend é chamado com o `RestClient` do próprio Spring (uma única requisição `POST`, sem biblioteca extra), e as duas implementações traduzem suas falhas para `EnvioDeEmailException` (`503`). O Resend foi escolhido por ser gratuito, sem cartão e por usar um remetente próprio (`onboarding@resend.dev`), em vez de enviar "em nome" de um Gmail, o que tende a cair no spam. |
 | **Collation ICU `pt-BR` definida na criação do banco** | A ordem das listas (tags, competências) depende da *collation* do banco. A padrão do Neon é `C.UTF-8`, que ordena pelo código dos caracteres (maiúsculas antes, "É" depois do "z"). Com ICU `pt-BR`, a ordem é a de um dicionário: "comunicação, docker, Ética, Java". A mesma configuração vale no Docker Compose, no Testcontainers e em produção, e um teste garante essa ordem. |
 
 ## Roadmap
@@ -351,7 +354,8 @@ Escolhas feitas de propósito, com o motivo. O que está fora do escopo agora te
 - [ ] Cache com Redis nas consultas públicas
 - [ ] Eventos assíncronos com RabbitMQ
 - [x] Migrações de banco (Flyway) no lugar do `ddl-auto`
-- [x] Perfil de produção (Swagger desligado, SMTP real, proxy HTTPS, sem padrões de desenvolvimento)
+- [x] Perfil de produção (Swagger desligado, proxy HTTPS, sem padrões de desenvolvimento)
 - [x] Dockerfile da API (multi-stage, camadas, usuário sem root)
 - [x] CI com GitHub Actions (testes a cada push e pull request)
-- [ ] Deploy no GCP Cloud Run
+- [x] E-mail do 2FA por API HTTP (Resend) em produção
+- [ ] Deploy no Render

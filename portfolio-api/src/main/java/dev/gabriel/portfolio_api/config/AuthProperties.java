@@ -30,9 +30,6 @@ public record AuthProperties(
         @NotNull
         Duration codigoValidade,
 
-        @NotBlank @Email
-        String remetente,
-
         @Min(1)
         int maxTentativasCodigo,
 

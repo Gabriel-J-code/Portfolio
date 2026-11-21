@@ -45,16 +45,16 @@ COPY --from=build /build/extracted/application/ ./
 
 USER spring
 
-# Perfil de producao por padrao (Swagger desligado, SMTP real, sem padroes de dev).
+# Perfil de producao por padrao (Swagger desligado, e-mail pelo Resend, sem padroes de dev).
 # Pode ser trocado na hora de rodar: docker run -e SPRING_PROFILES_ACTIVE=...
 ENV SPRING_PROFILES_ACTIVE=prod
 # A JVM reserva por padrao so 25% da memoria do container para o heap.
-# Num container dedicado a API, 75% aproveita melhor a memoria (ex.: Cloud Run com 512 MiB).
+# Num container dedicado a API, 75% aproveita melhor a memoria (ex.: Render free com 512 MB).
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75"
 
-# Documenta a porta (o Cloud Run informa a real pela variavel PORT; padrao 8080)
+# Documenta a porta (a hospedagem informa a real pela variavel PORT; padrao 8080)
 EXPOSE 8080
 
 # Forma "exec" (JSON): o java vira o processo principal e recebe o SIGTERM do
-# Docker/Cloud Run, permitindo desligar de forma limpa.
+# Docker/da hospedagem, permitindo desligar de forma limpa.
 ENTRYPOINT ["java", "-jar", "application.jar"]
